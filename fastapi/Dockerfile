@@ -13,11 +13,19 @@ RUN apt-get update -qq \
       && apt-get clean \
       && rm -rf /var/lib/apt/lists/*
 
+# Install Xvfb for X-server compatibility
+RUN apt-get update && \
+    apt-get install -y xvfb x11-apps
+
 # Install any needed packages specified in requirements.txt
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 RUN playwright install
 RUN playwright install-deps
+
+# Set the display environment variable
+ENV DISPLAY=:99
+
 # Copy the current directory contents into the container at /app
 COPY . /app
 
