@@ -25,6 +25,14 @@ def convert_posting_time(posting_time_str):
 
 class Crawler:
     def __init__(self, query, location, listings):
+        """
+        Initialize the Crawler instance.
+
+        Args:
+            query (str): The job title or keywords to search for.
+            location (str): The location to search for jobs.
+            listings (int): The number of job listings to scrape.
+        """
         self.browser = None
         self.page = None
 
@@ -35,8 +43,17 @@ class Crawler:
         self.today = datetime.today().date()
 
     async def _load_page(self):
+        """
+       Load the Indeed job search page and fill in the search criteria.
+
+       This function navigates to the Indeed website, fills in the job title and location,
+       and clicks the search button. It also attempts to close any modal that may appear.
+        """
+
         await self.page.goto("https://in.indeed.com/")
-        await self.page.wait_for_selector("input#text-input-what")
+        print("On indeed")
+        await self.page.wait_for_selector("input#text-input-what", timeout=60000)
+        print("Selector found")
         await self.page.fill("input#text-input-what", self.query)
         await self.page.fill("input#text-input-where", self.location)
         await self.page.click("button.yosegi-InlineWhatWhere-primaryButton")
@@ -47,6 +64,12 @@ class Crawler:
         await self.page.wait_for_timeout(1000)
 
     async def _close_modal(self):
+        """
+        Close any modal that appears on the page.
+
+        This function waits for a modal to appear and attempts to close it.
+        If no modal appears or an error occurs, it logs an appropriate message.
+        """
         try:
             # Wait for the modal to appear and then close it
             await self.page.wait_for_selector("#mosaic-desktopserpjapopup", timeout=5000)
@@ -59,10 +82,26 @@ class Crawler:
             print("No modal appeared or failed to close:", str(e))
 
     async def _load_browser(self, p):
+        """
+       Load the browser using Playwright.
+
+       Args:
+           p: The Playwright instance used to launch the browser.
+       """
         self.browser = await p.chromium.launch(headless=False)
         self.page = await self.browser.new_page()
 
     async def scrape_indeed(self, job) -> dict:
+        """
+       Scrape job details from an Indeed job listing.
+
+       Args:
+           job: The job element from which details will be scraped.
+
+       Returns:
+           dict: A dictionary containing job details such as title, company,
+                 location, description, link, and posting date.
+       """
         await job.click(timeout=30000)
         await self.page.wait_for_selector(
             "h2.jobsearch-JobInfoHeader-title", timeout=5000
@@ -108,8 +147,19 @@ class Crawler:
         }
 
     async def scrape_indeed_self(self):
+        """
+        Scrape multiple job listings from Indeed based on the specified query and location.
+
+        This function initializes the browser, loads the search page, and iteratively
+        scrapes job listings until the specified number of listings has been reached
+        or no more listings are available.
+
+        Yields:
+             str: A JSON string representation of each scraped job listing.
+        """
         async with async_playwright() as p:
             await self._load_browser(p)
+            print("Browser on.")
             await self._load_page()
             counter = 0
 
